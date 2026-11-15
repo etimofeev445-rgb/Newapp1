@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Найти рядом</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: #0a0e1a;
+    color: #ffffff;
+    min-height: 100vh;
+    max-width: 430px;
+    margin: 0 auto;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  .status-bar {
+    height: 44px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .app-header {
+    padding: 8px 16px 16px;
+  }
+
+  .top-cats {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .top-cats::-webkit-scrollbar { display: none; }
+
+  .cat-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .cat-pill:active { background: rgba(255,255,255,0.18); }
+
+  .location-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .location-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .all-cats {
+    color: #3b82f6;
+    font-size: 15px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    border-radius: 16px;
+    font-size: 15px;
+    font-weight: 500;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+  }
+  .tab:active { transform: scale(0.96); }
+
+  .content {
+    padding: 0 16px 100px;
+  }
+
+  .empty-state {
+    border: 1.5px dashed rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 32px 20px;
+    text-align: center;
+    color: rgba(255,255,255,0.65);
+    font-size: 16px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .empty-state:hover {
+    border-color: rgba(255,255,255,0.4);
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .card {
+    border-radius: 22px;
+    padding: 16px;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card:active { transform: scale(0.97); }
+  .card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .card-icon, .cart-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+  .cart-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.28);
+    font-size: 16px;
+  }
+
+  .card-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin-top: 12px;
+    line-height: 1.2;
+  }
+
+  .card-desc {
+    font-size: 12.5px;
+    opacity: 0.92;
+    margin-top: 4px;
+    line-height: 1.35;
+  }
+
+  .flixbus { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); }
+  .telegram { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+  .karta { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); }
+  .novosti { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+  .kurs { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
+  .pochta { background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); }
+
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0 24px;
+    z-index: 100;
+  }
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    cursor: pointer;
+    padding: 4px 12px;
+  }
+  .nav-item.active {
+    color: #3b82f6;
+  }
+  .nav-item span:first-child {
+    font-size: 22px;
+  }
+
+  .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #0a0e1a;
+    z-index: 200;
+    max-width: 430px;
+    margin: 0 auto;
+    padding: 16px;
+    animation: slideUp 0.3s ease;
+  }
+  .modal.active { display: block; }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .back-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+  }
+  .modal-title {
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .modal-content {
+    color: rgba(255,255,255,0.85);
+    line-height: 1.6;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.85);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 300;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>📶 🔋</span>
+  </div>
+
+  <div class="app-header">
+    <div class="top-cats">
+      <div class="cat-pill" onclick="showToast('Магазины')">🛒 Магазины</div>
+      <div class="cat-pill" onclick="showToast('Салоны красоты')">✂️ Салоны красоты</div>
+      <div class="cat-pill" onclick="showToast('Кафе')">☕</div>
+    </div>
+
+    <div class="location-header">
+      <div class="location-title">
+        <span style="color:#3b82f6;">📍</span>
+        Найти рядом
+      </div>
+      <div class="all-cats" onclick="showToast('Все категории')">Все категории ›</div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="goods" onclick="switchTab(this)">🛍️ Товары</div>
+      <div class="tab" data-tab="services" onclick="switchTab(this)">🔧 Услуги</div>
+      <div class="tab" data-tab="stores" onclick="switchTab(this)">🏪 Магазины</div>
+    </div>
+  </div>
+
+  <div class="content" id="mainContent">
+    <div class="empty-state" onclick="addFirstItem()">
+      Пока пусто — добавьте первое!
+    </div>
+
+    <div class="cards" id="cardsGrid">
+      <div class="card flixbus" onclick="openDetail('Flixbus', 'Автобусные билеты по Европе. Удобные рейсы по всей Европе с комфортом.')">
+        <div class="card-header">
+          <div class="card-icon">🚌</div>
+          <div class="cart-icon">🛒</div>
+        </div>
+        <div>
+          <div class="card-title">Flixbus</div>
+          <div class="card-desc">Автобусные билеты по Европе</div>
+        </div>
+      </div>
+
+      <div class="card telegram" onclick="openDetail('Telegram', 'Группы и каналы. Находите интересные сообщества и подписывайтесь на полезные каналы.')">
+        <div class="card-header">
+          <div class="card-icon">✈️</div>
+          <div class="cart-icon">🛒</div>
+        </div>
+        <div>
+          <div class="card-title">Telegram</div>
+          <div class="card-desc">Группы и каналы</div>
+        </div>
+      </div>
+
+      <div class="card karta" onclick="openDetail('Карта', 'Каталог магазинов, салонов, авто и услуг рядом с вами.')">
+        <div class="card-header">
+          <div class="card-icon">🗺️</div>
+          <div class="cart-icon">🛒</div>
+        </div>
+        <div>
+          <div class="card-title">Карта</div>
+          <div class="card-desc">Каталог магазинов, салонов, авто и услуг</div>
+        </div>
+      </div>
+
+      <div class="card novosti" onclick="openDetail('Новости', 'Финансы, технологии и Telegram-каналы. Актуальная информация.')">
+        <div class="card-header">
+          <div class="card-icon">📰</div>
+          <div class="cart-icon">🛒</div>
+        </div>
+        <div>
+          <div class="card-title">Новости</div>
+          <div class="card-desc">Финансы, технологии, Telegram-каналы</div>
+        </div>
+      </div>
+
+      <div class="card kurs" onclick="openDetail('Курс валют', 'Актуальные курсы от НБУ, ПриватБанк и monobank.')">
+        <div class="card-header">
+          <div class="card-icon">💱</div>
+          <div class="cart-icon">🛒</div>
+        </div>
+        <div>
+          <div class="card-title">Курс валют</div>
+          <div class="card-desc">НБУ, ПриватБанк, monobank</div>
+        </div>
+      </div>
+
+      <div class="card pochta" onclick="openDetail('Новая почта', 'Отслеживание ТТН и поиск ближайших отделений.')">
+        <div class="card-header">
+          <div class="card-icon">📦</div>
+          <div class="cart-icon">🛒</div>
+        </div>
+        <div>
+          <div class="card-title">Новая почта</div>
+          <div class="card-desc">Отслеживание ТТН, отделения</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item active" onclick="showToast('Главная')">
+      <span>🏠</span>
+      <span>Главная</span>
+    </div>
+    <div class="nav-item" onclick="showToast('Поиск')">
+      <span>🔍</span>
+      <span>Поиск</span>
+    </div>
+    <div class="nav-item" onclick="showToast('Избранное')">
+      <span>❤️</span>
+      <span>Избранное</span>
+    </div>
+    <div class="nav-item" onclick="showToast('Профиль')">
+      <span>👤</span>
+      <span>Профиль</span>
+    </div>
+  </div>
+
+  <div class="modal" id="detailModal">
+    <div class="modal-header">
+      <div class="back-btn" onclick="closeDetail()">←</div>
+      <div class="modal-title" id="modalTitle">Детали</div>
+    </div>
+    <div class="modal-content" id="modalContent">
+      Описание сервиса появится здесь.
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  function switchTab(el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    showToast('Вкладка: ' + el.textContent.trim());
+  }
+
+  function addFirstItem() {
+    showToast('Функция добавления скоро появится!');
+  }
+
+  function openDetail(title, desc) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalContent').innerHTML = '<p>' + desc + '</p><br><p style="opacity:0.6; font-size:14px;">Нажмите ← чтобы вернуться</p>';
+    document.getElementById('detailModal').classList.add('active');
+  }
+
+  function closeDetail() {
+    document.getElementById('detailModal').classList.remove('active');
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDetail();
+  });
+</script>
+</body>
+</html>
